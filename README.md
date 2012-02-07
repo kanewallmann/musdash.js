@@ -19,10 +19,10 @@ Here is an example of how to use musdash.js:
 		}
 	};
 
-var template = Musdash.compile( '<ul>{{#data}}<li>{{#bold}}{{first}}{{/bold}} {{last}}</li>{{/data}}</ul>' );
-var output = template.parse( view );
+	var template = Musdash.compile( '<ul>{{#data}}<li>{{#bold}}{{first}}{{/bold}} {{last}}</li>{{/data}}</ul>' );
+	var output = template.parse( view );
 
-// `template` can be used as many times as necessary to avoid re-compiling (even though compiling is super fast anyway)
+	// `template` can be used as many times as necessary to avoid re-compiling (even though compiling is super fast anyway)
 
 ## Restrictions
 

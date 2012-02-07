@@ -8,16 +8,16 @@ musdash.js was designed to be extremely fast at compiling and parsing {{mustache
 
 Here is an example of how to use musdash.js:
 
-var view = {
-	data: [ 
-		{ first: "Jane", last: "Doe" }, 
-		{ first: "Joe", last: "Blogs" }
-	],
-	bold: function( text )
-	{
-		return '<b>' + text + '</b>';
-	}
-};
+	var view = {
+		data: [ 
+			{ first: "Jane", last: "Doe" }, 
+			{ first: "Joe", last: "Blogs" }
+		],
+		bold: function( text )
+		{
+			return '<b>' + text + '</b>';
+		}
+	};
 
 var template = Musdash.compile( '<ul>{{#data}}<li>{{#bold}}{{first}}{{/bold}} {{last}}</li>{{/data}}</ul>' );
 var output = template.parse( view );

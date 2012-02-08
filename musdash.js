@@ -8,7 +8,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 (function (exports) {
 
     exports.name = "musdash.js";
-    exports.version = "0.1.1-dev";
+    exports.version = "0.1.2-dev";
     exports.compile = compile;
     exports.options = options;
     
@@ -58,7 +58,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 if( t )
                 {
                    if( this.code[a] !== null )
-                     res += this.code[a]._render( scope );
+                       res += this.code[a]._render( scope );
                 }
                 else
                 {
@@ -75,33 +75,29 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
         {
             var a;
             
+            var current = stack[0];
+            
             if( this.name !== null )
             {
                 for( a = 0, len = stack.length; a < len; a++ )
                 {
                     if( stack[a][this.name] !== undefined )
                     {
-                        stack.unshift( stack[a][this.name] );
+                        current = stack[a][this.name];
                         break;
                     }
                 }
             }
 
-            var current = stack[0];
-
             if( typeof current == "function" )
             {
-                stack.shift();
-
                 return current( this._dorender( stack ) );
             }
             else if( current instanceof Array )
             {
                 var res = "";
                 var count = current.length;
-
-                stack.shift();
-                                
+      
                 if( count === 0 )
                 {
                     if( !this.inverted ) return "";
@@ -124,6 +120,9 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             }
             else
             {
+                if( this.name !== null )
+                    stack.unshift( current );
+                
                 return this._dorender( stack );
             }
         };
@@ -150,6 +149,10 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
         {
             if( symbol == '.' ) return stack[0];
 
+            // Quick out (most common)
+            if( stack[0][symbol] !== undefined )
+                return stack[0][symbol];
+            
             var names = symbol.split( '.' );
             var names_count = names.length;
 
@@ -161,7 +164,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 {                    
                     t = t[names[b]];
 
-                    if( t !== undefined ) break;
+                    if( t === undefined ) break;
                 }
 
                 if( t !== undefined ) return t;
@@ -192,8 +195,6 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             name: null,
             inverted: false
         };
-
-        
         
         for( ; a < l; a++ )
         {
@@ -233,7 +234,6 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
         if( scope.parent !== null ) throw new Error( "`" + scope.name + "` was left open" );
 
-        
         return new proc( scope.code, null, null );
     }
     

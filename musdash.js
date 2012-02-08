@@ -8,21 +8,30 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 (function (exports) {
 
     exports.name = "musdash.js";
-    exports.version = "0.1.0-dev";
+    exports.version = "0.1.1-dev";
     exports.compile = compile;
+    exports.options = options;
+    
+    var regx = /&<>"'/g;
     
     var escapeMap = {
         "&" : "&amp;",
         "<": "&lt;",
-            ">" : "&gt;",
+        ">" : "&gt;",
         '"' : '&quot;',
         "'" : '&#39;'
     };
             
-    var defaults = {
+    var opts = {
         open: '{{',
         close: '}}'
     };
+    
+    function options( val )
+    {
+        for( var key in val )
+            this.opts[key] = val[key];
+    }
     
     function proc( code, name, inverted )
     {
@@ -35,7 +44,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             return this._render( [
                 view
             ] );
-        }
+        };
 
         this._dorender = function( scope )
         {
@@ -47,10 +56,10 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             for( ; a < l; a++ )
             {
                 if( t )
-                 {
-                    if( this.code[a] != null )
-                        res += this.code[a]._render( scope );
-                 }
+                {
+                   if( this.code[a] !== null )
+                     res += this.code[a]._render( scope );
+                }
                 else
                 {
                     res += this.code[a];
@@ -60,17 +69,17 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             }
 
             return res;
-        }
+        };
 
         this._render = function( stack )
         {
-            var stack;
+            var a;
             
-            if( this.name != undefined )
+            if( this.name !== null )
             {
-                for( var a = 0; a < stack.length; a++ )
+                for( a = 0, len = stack.length; a < len; a++ )
                 {
-                    if( stack[a][this.name] != undefined )
+                    if( stack[a][this.name] !== undefined )
                     {
                         stack.unshift( stack[a][this.name] );
                         break;
@@ -93,7 +102,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
                 stack.shift();
                                 
-                if( count == 0 )
+                if( count === 0 )
                 {
                     if( !this.inverted ) return "";
 
@@ -103,7 +112,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 {
                     if( this.inverted ) return "";
 
-                    for( var a = 0; a < count; a++ )
+                    for( a = 0; a < count; a++ )
                     {
                         stack.unshift( current[a] );
                         res += this._dorender( stack );
@@ -117,7 +126,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             {
                 return this._dorender( stack );
             }
-        }
+        };
     }
 
     function value( name, escape )
@@ -129,12 +138,13 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
         {
             var val = this._findSymbol( stack, this.name );
 
-            if( val == null ) return "";
+            if( val === null ) return "";
 
             if( typeof val == "function" )
                 return val.apply( stack[0], [] );
-            else return this.escape ? escapeHTML( val ) : val;
-        }
+            else
+                return this.escape ? escapeHTML( val ) : val;
+        };
 
         this._findSymbol = function( stack, symbol )
         {
@@ -143,54 +153,48 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             var names = symbol.split( '.' );
             var names_count = names.length;
 
-            for( var a = 0; a < stack.length; a++ )
+            for( var a = 0, len = stack.length; a < len; a++ )
             {
                 var t = stack[a];
-
+                
                 for( var b = 0; b < names_count; b++ )
-                {
+                {                    
                     t = t[names[b]];
 
-                    if( t == undefined ) break;
+                    if( t !== undefined ) break;
                 }
 
-                if( t != undefined ) return t;
+                if( t !== undefined ) return t;
             }
 
             return null;
-        }
+        };
     }
 
     function escapeHTML( string )
     {
-        return string.replace( /&<>"'/g, function( s )
+        return string.replace( regx, function( s )
         {
             return escapeMap[s] || s;
-        } );
+        });
     }
 
-    function compile( template, options )
+    function compile( template )
     {
-        var opts = {};
-        for( var attr in defaults )
-            opts[ attr ] = defaults[ attr ];
-        for( var attr in options )
-            opts[ attr ] = options[ attr ];
-        
         var parts = template.split( opts.open );
         var l = parts.length;
         var a = 1;
         var i = 1;
         
         var scope = {
-        code : [
-            parts[0]
-        ],
-        parent : null,
-        name : null,
-        inverted : false
+            code: [ parts[0] ],
+            parent: null,
+            name: null,
+            inverted: false
         };
 
+        
+        
         for( ; a < l; a++ )
         {
             tmp = parts[a].split( opts.close );
@@ -227,10 +231,10 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             scope.code.push( part2 );
         }
 
-        if( scope.parent != null ) throw new Error( "`" + scope.name + "` was left open" );
+        if( scope.parent !== null ) throw new Error( "`" + scope.name + "` was left open" );
 
         
-        return new proc( scope.code );
+        return new proc( scope.code, null, null );
     }
     
-})(Musdash)
+})(Musdash);

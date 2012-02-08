@@ -26,13 +26,9 @@ Here is an example of how to use musdash.js:
 
 ## Links
 
-Comparison of speed against mustach.js
-
-	http://jsperf.com/musdash-js-vs-mustache-js/4
+[Comparison of speed against mustach.js](http://jsperf.com/musdash-js-vs-mustache-js/4)
 	
-Test cases
-
-	http://tocsick.github.com/musdash.js/test
+[Test cases](http://tocsick.github.com/musdash.js/test)
 
 ## Restrictions
 

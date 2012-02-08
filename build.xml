@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<!--
+Author: Kane Wallmann
+-->
+<project default="all" basedir="." name="Musdash.js">  
+
+	<target name="all">
+		
+		<mkdir dir="build"/>
+		
+		<java fork="true" jar="tools/yuicompressor-2.4.7.jar" output="build/musdash.min.js">
+			<arg value="musdash.js"/>
+		</java>
+	</target>
+	
+</project>

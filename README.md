@@ -38,6 +38,24 @@ Currently musdash.js supports most of the same features of mustache.js. The big 
 
 musdash.js handles functions a little differently, see the example usage above for clarification.
 
+musdash.js adds some utility variables which can be used within arrays, '_i' refers to the current index of the array (it is 1-indexed for convenience i.e. 1,2,3 not 0,1,2) and '_c' refers to the total number of items in the array
+
+	var view = {
+		data: [ 
+			{ first: "Jane", last: "Doe" }, 
+			{ first: "Joe", last: "Blogs" }
+		],
+		separator: function()
+		{
+			return (this._i != this._c) ? ", " : "";
+		}
+	};
+	
+	var template = Musdash.compile( '{{#data}}{{_i}}. {{first}} {{last}}{{separator}}{{/data}}' );
+	var output = template.parse( view );
+	
+	// Outputs "1. Jane Doe, 2. Joe Blogs";
+
 ## Note
 
 musdash.js is still an infant and care should be taken using it in a production environment.

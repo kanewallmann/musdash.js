@@ -8,11 +8,11 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 (function (exports) {
 
     exports.name = "musdash.js";
-    exports.version = "0.1.2-dev";
+    exports.version = "0.1.3-dev";
     exports.compile = compile;
     exports.options = options;
     
-    var regx = /&<>"'/g;
+    var regx = /&(?!\w+;)|[<>"']/g;
     
     var escapeMap = {
         "&" : "&amp;",
@@ -91,7 +91,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
             if( typeof current == "function" )
             {
-                return current( this._dorender( stack ) );
+                return current.apply( stack[0], [ this._dorender( stack ) ] );
             }
             else if( current instanceof Array )
             {
@@ -111,6 +111,8 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                     for( a = 0; a < count; a++ )
                     {
                         stack.unshift( current[a] );
+                        stack[0]._i = a+1;
+                        stack[0]._c = count;
                         res += this._dorender( stack );
                         stack.shift();
                     }
@@ -176,7 +178,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
     function escapeHTML( string )
     {
-        return string.replace( regx, function( s )
+        return new String(string).replace( regx, function( s )
         {
             return escapeMap[s] || s;
         });

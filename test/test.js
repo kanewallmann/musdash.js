@@ -1,8 +1,17 @@
+// Partials
+
+var partials = {
+        
+        'partial1' : 'Hello, World',
+        'partial2' : '{{first}} {{second}}',
+        'partial3' : '{{#bold}}{{first}}{{/bold}} {{second}}',
+};
+
 // Functions
 
 var bold_func = function( text )
 {
-    return '<b>' + text + '</b>';
+    return '<b>' + this.render( text ) + '</b>';
 }
 
 var hello_func = function()
@@ -129,10 +138,45 @@ var tests = [
      },
      
      { 
+         desc: "String Escaping (Disabled w/ Triple Mustache)", 
+         view: { first: "<Hello>,", second: "&World&" },
+         template: "{{{first}}} {{{second}}}",
+         result: "<Hello>, &World&"
+     },
+     
+     { 
+         desc: "Triple Mustache Open, Double Close", 
+         view: { first: "<Hello>,", second: "&World&" },
+         template: "{{{first}} {{{second}}",
+         result: "&lt;Hello&gt;, &amp;World&amp;"
+     },
+     
+     { 
          desc: "String Escaping (Disabled)", 
          view: { first: "<Hello>,", second: "&World&" },
          template: "{{&first}} {{&second}}",
          result: "<Hello>, &World&"
+     },
+     
+     { 
+         desc: "Partial Basic", 
+         view: {  },
+         template: "{{>partial1}}",
+         result: "Hello, World"
+     },
+     
+     { 
+         desc: "Partial Stack Access", 
+         view: { first: "Hello,", second: "World" },
+         template: "{{>partial2}}",
+         result: "Hello, World"
+     },
+     
+     { 
+         desc: "Partial Function", 
+         view: { bold: bold_func, first: "Hello,", second: "World" },
+         template: "{{>partial3}}",
+         result: "<b>Hello,</b> World"
      },
      
      { 
@@ -147,6 +191,13 @@ var tests = [
          view: { data: [ "Hello,", "World" ] },
          template: "{{#data}}{{/dta}}",
          result: "Error: Expecting `/data` not `/dta`"
+     },
+     
+     { 
+         desc: "Unknown Partial", 
+         view: { },
+         template: "{{>not-a-partial}}",
+         result: "Error: Partial `not-a-partial` is not defined"
      },
 ];
 
@@ -163,7 +214,7 @@ for( var a = 0; a < tests.length; a++ )
     try
     {
         tpl = Musdash.compile( tests[a].template );
-        result = tpl.parse( tests[a].view );
+        result = tpl.parse( tests[a].view, partials );
     }
     catch( e )
     {
@@ -176,8 +227,8 @@ for( var a = 0; a < tests.length; a++ )
     
     document.write( "<td>" + tests[a].desc + "</td>" );
 
-    document.write( "<td><pre>" + tests[a].result + "</pre></td>" );
-    document.write( "<td><pre>" + result + "</pre></td>" );
+    document.write( "<td><textarea cols=60 rows=1>" + tests[a].result + "</textarea></td>" );
+    document.write( "<td><textarea cols=60 rows=1>" + result + "</textarea></td>" );
     
     if( pass )
         document.write( "<td style='color: green;'>Pass.</td>" );

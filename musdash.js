@@ -8,9 +8,10 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 (function (exports) {
 
     exports.name = "musdash.js";
-    exports.version = "0.1.3-dev";
+    exports.version = "0.1.5-dev";
     exports.compile = compile;
     exports.options = options;
+    exports.render = render;
     
     var regx = /&(?!\w+;)|[<>"']/g;
     
@@ -24,8 +25,17 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             
     var opts = {
         open: '{{',
-        close: '}}'
+        close: '}}',
+        cache: true
     };
+    
+    var cache = {};
+    
+    function render( template, view )
+    {
+        var tpl = compile( template );
+        return tpl.parse( view );
+    }
     
     function options( val )
     {
@@ -33,20 +43,19 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             this.opts[key] = val[key];
     }
     
-    function proc( code, name, inverted )
+    function proc( code, name, inverted, content )
     {
         this.code = code;
         this.name = name;
         this.inverted = inverted;
+        this.content = content;
 
-        this.parse = function( view )
+        this.parse = function( view, partials )
         {
-            return this._render( [
-                view
-            ] );
-        };
-
-        this._dorender = function( scope )
+            return this._render( [view], partials );
+        }
+        
+        this._dorender = function( scope, partials )
         {
             var t = true;
             var a = 1;
@@ -58,7 +67,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 if( t )
                 {
                    if( this.code[a] !== null )
-                       res += this.code[a]._render( scope );
+                       res += this.code[a]._render( scope, partials );
                 }
                 else
                 {
@@ -71,7 +80,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             return res;
         };
 
-        this._render = function( stack )
+        this._render = function( stack, partials )
         {
             var a;
             
@@ -91,7 +100,12 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
             if( typeof current == "function" )
             {
-                return current.apply( stack[0], [ this._dorender( stack ) ] );
+                stack[0].render = function( text )
+                {
+                    return compile( text )._render( stack, partials );
+                }
+                                
+                return current.apply( stack[0], [ this.content ] );
             }
             else if( current instanceof Array )
             {
@@ -102,7 +116,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 {
                     if( !this.inverted ) return "";
 
-                    return this._dorender( stack );
+                    return this._dorender( stack, partials );
                 }
                 else
                 {
@@ -113,7 +127,7 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                         stack.unshift( current[a] );
                         stack[0]._i = a+1;
                         stack[0]._c = count;
-                        res += this._dorender( stack );
+                        res += this._dorender( stack, partials );
                         stack.shift();
                     }
                 }
@@ -125,17 +139,31 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 if( this.name !== null )
                     stack.unshift( current );
                 
-                return this._dorender( stack );
+                return this._dorender( stack, partials );
             }
         };
     }
 
+    function partial( name )
+    {
+        this.name = name;
+        
+        this._render = function( stack, partials )
+        {
+            var partial = partials[ name ];
+            
+            if( partial === undefined ) throw new Error( 'Partial `' + name + '` is not defined' );
+            
+            return compile( partial ).parse( stack );
+        }
+    }
+    
     function value( name, escape )
     {
         this.name = name;
         this.escape = escape;
 
-        this._render = function( stack )
+        this._render = function( stack, partials )
         {
             var val = this._findSymbol( stack, this.name );
 
@@ -183,19 +211,28 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             return escapeMap[s] || s;
         });
     }
-
+    
     function compile( template )
     {
+        if( opts.cache )
+        {
+            var compiled = cache[ template ];
+            
+            if( compiled !== undefined )
+                return compiled;
+        }
+        
         var parts = template.split( opts.open );
         var l = parts.length;
         var a = 1;
-        var i = 1;
+        var c, content;
         
         var scope = {
             code: [ parts[0] ],
             parent: null,
+            content: parts[0],
             name: null,
-            inverted: false
+            inverted: false,
         };
         
         for( ; a < l; a++ )
@@ -203,40 +240,72 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             tmp = parts[a].split( opts.close );
             part1 = tmp[0];
             part2 = tmp[1];
-
-            if( part1[0] == '#' )
+            
+            c = part1.substring( 0, 1 );
+            
+            content = opts.open + parts[a];
+            
+            if( c == '/' )
             {
-                scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : false };
-            }
-            else if( part1[0] == '^' )
-            {
-                scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : true };
-            }
-            else if( part1[0] == '/' )
-            {                
                 if( '/' + scope.name != part1 ) throw new Error( "Expecting `/" + scope.name + "` not `" + part1 + "`" );
-                scope.parent.code.push( new proc( scope.code, scope.name, scope.inverted ) );
+                scope.parent.code.push( new proc( scope.code, scope.name, scope.inverted, scope.content ) );
+                scope.parent.content+=scope.content;
                 scope = scope.parent;
-            }
-            else if( part1[0] == '!' )
-            {
-                scope.code.push( null );
-            }
-            else if( part1[0] == '&' )
-            {
-                scope.code.push( new value( part1.substring( 1 ), false ) );
+                scope.content += content;
             }
             else
             {
-                scope.code.push( new value( part1, true ) );
+                scope.content += content;
+                
+                if( c == '#' )
+                {
+                    scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : false, content: "" };
+                }
+                else if( c == '^' )
+                {
+                    scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : true, content: "" };
+                }
+                else if( c == '>' )
+                {
+                    scope.code.push( new partial( part1.substring( 1 ) ) );
+                }
+                else if( c == '!' )
+                {
+                    scope.code.push( null );
+                }
+                else if( c == '&' )
+                {
+                    scope.code.push( new value( part1.substring( 1 ), false ) );
+                }
+                else if( c == '{' )
+                {
+                    if( part2[0] == '}' )
+                    {
+                        scope.code.push( new value( part1.substring( 1 ), false ) );
+                        part2 = part2.substring( 1 );
+                    }
+                    else
+                    {
+                        scope.code.push( new value( part1.substring( 1 ), true ) );
+                    }
+                }
+                else
+                {
+                    scope.code.push( new value( part1, true ) );
+                }
             }
-
+            
             scope.code.push( part2 );
         }
 
         if( scope.parent !== null ) throw new Error( "`" + scope.name + "` was left open" );
 
-        return new proc( scope.code, null, null );
+        var ret = new proc( scope.code, null, null, scope.content );
+        
+        if( opts.cache )
+            cache[ template ] = ret;
+        
+        return ret;
     }
     
 })(Musdash);

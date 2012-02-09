@@ -15,28 +15,26 @@ Here is an example of how to use musdash.js:
 		],
 		bold: function( text )
 		{
-			return '<b>' + text + '</b>';
+			return '<b>' + this.render( text ) + '</b>';
 		}
 	};
 
 	var template = Musdash.compile( '<ul>{{#data}}<li>{{#bold}}{{first}}{{/bold}} {{last}}</li>{{/data}}</ul>' );
-	var output = template.parse( view );
+	var output = template.parse( view, /* optional partials parameter */ );
 
 	// `template` can be used as many times as necessary to avoid re-compiling (even though compiling is super fast anyway)
 
 ## Links
 
-[Comparison of speed against mustach.js](http://jsperf.com/musdash-js-vs-mustache-js/4)
+[Comparison of speed against mustache.js](http://jsperf.com/musdash-js-vs-mustache-js/4)
 	
 [Test cases](http://tocsick.github.com/musdash.js/test)
 
-## Restrictions
+## Features
 
-Currently musdash.js supports most of the same features of mustache.js. The big one missing is partials, these are coming soon.
+musdash.js currently supports all mustache features except the 'Set Delimiter' feature.
 
-## Differences
-
-musdash.js handles functions a little differently, see the example usage above for clarification.
+See [the mustache manual](http://mustache.github.com/mustache.5.html) for more information.
 
 musdash.js adds some utility variables which can be used within arrays, '_i' refers to the current index of the array (it is 1-indexed for convenience i.e. 1,2,3 not 0,1,2) and '_c' refers to the total number of items in the array
 
@@ -55,6 +53,16 @@ musdash.js adds some utility variables which can be used within arrays, '_i' ref
 	var output = template.parse( view );
 	
 	// Outputs "1. Jane Doe, 2. Joe Blogs";
+
+## mustache.js Compatibility
+
+musdash.js has slightly different syntax to mustache.js see demos for example.
+
+## Building
+
+mustdash.js comes with an ant build script, which at the moment simply compresses the source with YUI Compressor.
+
+Simple run the 'ant' command in the project directory and the minified version will be placed in 'build'.
 
 ## Note
 

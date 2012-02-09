@@ -20,7 +20,7 @@ Here is an example of how to use musdash.js:
 	};
 
 	var template = Musdash.compile( '<ul>{{#data}}<li>{{#bold}}{{first}}{{/bold}} {{last}}</li>{{/data}}</ul>' );
-	var output = template.parse( view, /* optional partials parameter */ );
+	var output = template.parse( view /*, optional partials parameter */ );
 
 	// `template` can be used as many times as necessary to avoid re-compiling (even though compiling is super fast anyway)
 

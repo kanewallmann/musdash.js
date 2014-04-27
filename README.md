@@ -13,9 +13,9 @@ Here is an example of how to use musdash.js:
 			{ first: "Jane", last: "Doe" }, 
 			{ first: "Joe", last: "Blogs" }
 		],
-		bold: function( text )
+		bold: function( render, text )
 		{
-			return '<b>' + this.render( text ) + '</b>';
+			return '<b>' + render( text ) + '</b>';
 		}
 	};
 

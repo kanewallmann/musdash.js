@@ -9,9 +9,12 @@ var partials = {
 
 // Functions
 
-var bold_func = function( text )
+var bold_func = function(  )
 {
-    return '<b>' + this.render( text ) + '</b>';
+    return function( text,render )
+    {
+    	return '<b>' + render( text ) + '</b>'
+    };
 }
 
 var hello_func = function()
@@ -38,7 +41,7 @@ var concat_n_func = function()
 // Tests
 
 var tests = [
-                    
+                  
      { 
          desc: "Basic", 
          view: { first: "Hello,", second: "World" },
@@ -180,6 +183,27 @@ var tests = [
      },
      
      { 
+         desc: "Set Delimeter", 
+         view: { first: "Hello,", second: "World" },
+         template: "{{first}}{{=<% %>=}} <%second%> <%={{ }}=%>{{second}}",
+         result: "Hello, World World"
+     },
+     
+     { 
+         desc: "Set Delimeter (Complex)", 
+         view: { data: [ { first: "Hello,", second: "World" } ] },
+         template: "{{#data}}{{first}}{{=<% %>=}} <%second%> <%={{ }}=%>{{second}}{{/data}}",
+         result: "Hello, World World"
+     },
+     
+     { 
+         desc: "Bad Delimeter", 
+         view: { first: "Hello,", second: "World" },
+         template: "{{first}}{{=%% %%=}} <%second%>",
+         result: "Error: Delimeters cannot be the same"
+     },
+     
+     { 
          desc: "Mustache Left Open", 
          view: { data: [ "Hello,", "World" ] },
          template: "{{#data}}",
@@ -213,8 +237,8 @@ for( var a = 0; a < tests.length; a++ )
 {
     try
     {
-        tpl = Musdash.compile( tests[a].template );
-        result = tpl.parse( tests[a].view, partials );
+        tpl = Mustache.compile( tests[a].template );
+        result = tpl( tests[a].view, partials );
     }
     catch( e )
     {
@@ -249,8 +273,8 @@ for( var b = 0; b < 1000; b++ )
     {
         try
         {
-            tpl = Musdash.compile( tests[a].template );
-            tpl.parse( tests[a].view );
+            tpl = Mustache.compile( tests[a].template );
+            tpl( tests[a].view );
         }
         catch(e)
         {}

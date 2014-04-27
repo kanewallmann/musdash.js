@@ -3,12 +3,12 @@
  * Some code borrowed from: http://github.com/janl/mustache.js
  */
 
-var Musdash = (typeof module !== "undefined" && module.exports) || {};
+var Mustache = (typeof module !== "undefined" && module.exports) || {};
 
 (function (exports) {
 
     exports.name = "musdash.js";
-    exports.version = "0.1.5-dev";
+    exports.version = "0.1.6-dev";
     exports.compile = compile;
     exports.options = options;
     exports.render = render;
@@ -31,10 +31,10 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
     
     var cache = {};
     
-    function render( template, view )
+    function render( template, view, partials )
     {
-        var tpl = compile( template );
-        return tpl.parse( view );
+        var tpl = _compile( template );
+        return tpl.parse( view, partials );
     }
     
     function options( val )
@@ -53,42 +53,35 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
         this.parse = function( view, partials )
         {
             return this._render( [view], partials );
-        }
+        };
         
         this._dorender = function( scope, partials )
         {
-            var t = true;
             var a = 1;
             var l = this.code.length;
             var res = this.code[0];
-
-            for( ; a < l; a++ )
+            
+            for( ; a < l; a += 2 )
             {
-                if( t )
-                {
-                   if( this.code[a] !== null )
-                       res += this.code[a]._render( scope, partials );
-                }
-                else
-                {
-                    res += this.code[a];
-                }
+               if( this.code[a] !== null )
+                   res += this.code[a]._render( scope, partials );
 
-                t = !t;
+               if( a != l-1 )
+            	   res += this.code[a+1];
             }
-
+            
             return res;
         };
 
         this._render = function( stack, partials )
         {
-            var a;
+            var a = 0;
             
             var current = stack[0];
             
             if( this.name !== null )
             {
-                for( a = 0, len = stack.length; a < len; a++ )
+                for( ; a < stack.length; a++ )
                 {
                     if( stack[a][this.name] !== undefined )
                     {
@@ -100,12 +93,9 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
 
             if( typeof current == "function" )
             {
-                stack[0].render = function( text )
-                {
-                    return compile( text )._render( stack, partials );
-                }
-                                
-                return current.apply( stack[0], [ this.content ] );
+                var writer = current.apply( null );
+                
+                return writer.apply( null, [ this.content, function( text ){ return _compile( text )._render( stack, partials ); } ] );
             }
             else if( current instanceof Array )
             {
@@ -154,8 +144,8 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             
             if( partial === undefined ) throw new Error( 'Partial `' + name + '` is not defined' );
             
-            return compile( partial ).parse( stack );
-        }
+            return _compile( partial ).parse( stack );
+        };
     }
     
     function value( name, escape )
@@ -214,6 +204,12 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
     
     function compile( template )
     {
+    	var tpl = _compile( template );
+    	return function( view, partials ){ return tpl.parse( view, partials ); }
+    }
+    
+    function _compile( template )
+    {
         if( opts.cache )
         {
             var compiled = cache[ template ];
@@ -222,7 +218,69 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 return compiled;
         }
         
-        var parts = template.split( opts.open );
+        var delim = template.indexOf( opts.open + '=' );
+        
+        var parts = [];
+        
+        var open = opts.open;
+        var close = opts.close;
+                
+        var delim_part, delim_parts, delim_trim, part, left_parts, i;
+        
+        while( delim != -1 )
+        {
+        	if( open == close )
+        		throw new Error( 'Delimeters cannot be the same' );
+        	
+        	if( delim != 0 )
+        	{
+        		if( parts.length % 2 == 1 )
+        			parts.push( '' );
+        		
+	        	part = template.substring( 0, delim );
+	        	
+	        	left_parts = part.split( open );
+	        	
+	        	for( i in left_parts )
+	    		{
+	        		parts = parts.concat( left_parts[i].split( close ) );
+	    		}
+	        	
+	            if( parts.length % 2 == 1 )
+	    			parts.push( '' );
+        	}
+             
+        	if( delim != template.length )
+        	{
+	        	delim_part = template.substring( delim );
+	        	delim_part = delim_part.substring( open.length + 1 );
+	        	delim_part = delim_part.substring( 0, delim_part.indexOf( '=' + close ) );
+	        	
+	        	delim_parts = delim_part.split( ' ' );
+	        
+	        	delim_trim = delim + open.length + 2 + close.length;
+	        	
+	        	open = delim_parts[0];
+	        	close = delim_parts[1];
+	        	
+	        	delim_trim += open.length + close.length + 1;
+	
+	        	template = template.substring( delim_trim );
+        	}
+        	
+        	delim = template.indexOf( open + '=' );
+        }
+        
+        if( open == close )
+    		throw new Error( 'Delimeters cannot be the same' );
+        		    	
+    	var left_parts = template.split( open );
+    	
+    	for( i in left_parts )
+		{
+    		parts = parts.concat( left_parts[i].split( close ) );
+		}
+        
         var l = parts.length;
         var a = 1;
         var c, content;
@@ -235,19 +293,17 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
             inverted: false,
         };
         
-        for( ; a < l; a++ )
+        for( ; a < l; a+=2 )
         {
-            tmp = parts[a].split( opts.close );
-            part1 = tmp[0];
-            part2 = tmp[1];
+        	part = parts[ a ];
+    	
+            c = part[0];
             
-            c = part1.substring( 0, 1 );
-            
-            content = opts.open + parts[a];
+            content = opts.open + part;
             
             if( c == '/' )
             {
-                if( '/' + scope.name != part1 ) throw new Error( "Expecting `/" + scope.name + "` not `" + part1 + "`" );
+                if( '/' + scope.name != part ) throw new Error( "Expecting `/" + scope.name + "` not `" + part + "`" );
                 scope.parent.code.push( new proc( scope.code, scope.name, scope.inverted, scope.content ) );
                 scope.parent.content+=scope.content;
                 scope = scope.parent;
@@ -259,15 +315,15 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 
                 if( c == '#' )
                 {
-                    scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : false, content: "" };
+                    scope = { code : [], parent : scope, name : part.substring( 1 ), inverted : false, content: "" };
                 }
                 else if( c == '^' )
                 {
-                    scope = { code : [], parent : scope, name : part1.substring( 1 ), inverted : true, content: "" };
+                    scope = { code : [], parent : scope, name : part.substring( 1 ), inverted : true, content: "" };
                 }
                 else if( c == '>' )
                 {
-                    scope.code.push( new partial( part1.substring( 1 ) ) );
+                    scope.code.push( new partial( part.substring( 1 ) ) );
                 }
                 else if( c == '!' )
                 {
@@ -275,27 +331,28 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
                 }
                 else if( c == '&' )
                 {
-                    scope.code.push( new value( part1.substring( 1 ), false ) );
+                    scope.code.push( new value( part.substring( 1 ), false ) );
                 }
                 else if( c == '{' )
                 {
-                    if( part2[0] == '}' )
+                    if( parts[a+1][0] == '}' )
                     {
-                        scope.code.push( new value( part1.substring( 1 ), false ) );
-                        part2 = part2.substring( 1 );
+                        scope.code.push( new value( part.substring( 1 ), false ) );
+                        parts[a+1] = parts[a+1].substring( 1 );
                     }
                     else
                     {
-                        scope.code.push( new value( part1.substring( 1 ), true ) );
+                        scope.code.push( new value( part.substring( 1 ), true ) );
                     }
                 }
                 else
                 {
-                    scope.code.push( new value( part1, true ) );
+                    scope.code.push( new value( part, true ) );
                 }
             }
-            
-            scope.code.push( part2 );
+
+            if( a < l-1 )
+            	scope.code.push( parts[ a+1 ] );
         }
 
         if( scope.parent !== null ) throw new Error( "`" + scope.name + "` was left open" );
@@ -308,4 +365,4 @@ var Musdash = (typeof module !== "undefined" && module.exports) || {};
         return ret;
     }
     
-})(Musdash);
+})(Mustache);
